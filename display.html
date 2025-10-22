@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>婚禮即時祝福牆</title>
+  <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Ma+Shan+Zheng&family=Baloo+Bhaijaan+2&family=Pacifico&family=Luckiest+Guy&display=swap" rel="stylesheet">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      background: url('DSC04332.jpg') center center / cover no-repeat fixed;
+      font-family: 'Noto Sans TC', sans-serif;
+      overflow: hidden;
+    }
+    .danmu {
+      position: absolute;
+      white-space: nowrap;
+      font-weight: bold;
+      font-size: 2.2em;
+      pointer-events: none;
+      text-shadow: 1px 2px 16px #fff8, 0 0 8px #ffb6cf88;
+      user-select: none;
+      opacity: 0.92;
+      z-index: 10;
+      transition: opacity 0.3s;
+    }
+    .pop-message {
+      position: absolute;
+      left: 50%;
+      top: 45%;
+      transform: translate(-50%, -50%) scale(0.7);
+      background: #fff9c4;
+      color: #ff3d6a;
+      border-radius: 35px;
+      padding: 0.6em 2em;
+      font-size: 2.3em;
+      font-weight: bold;
+      box-shadow: 0 8px 32px #e88ad633;
+      border: 3px solid #ff3d6a33;
+      opacity: 0;
+      animation: pop-in 0.5s cubic-bezier(.3,1.8,.6,1.0) forwards, pop-out 0.8s linear 2.8s forwards;
+      z-index: 100;
+      font-family: 'ZCOOL KuaiLe', 'Ma Shan Zheng', 'Pacifico', 'Baloo Bhaijaan 2', 'Luckiest Guy', cursive, 'Noto Sans TC', sans-serif;
+      text-shadow: 0 0 14px #fff8, 0 2px 24px #ffb6cf55;
+    }
+    @keyframes pop-in {
+      to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+    @keyframes pop-out {
+      to {
+        opacity: 0;
+        transform: translate(-50%, -55%) scale(0.9);
+      }
+    }
+    h1 {
+      color: #ff3d6a;
+      text-align: center;
+      margin: 1vh 0 2vh 0;
+      font-size: 2.7em;
+      font-family: 'Luckiest Guy', cursive, 'Noto Sans TC', sans-serif;
+      text-shadow: 0 0 12px #fff8;
+      z-index: 99;
+      position: relative;
+    }
+    #titleBox { width: 100vw; z-index: 90; }
+  </style>
+</head>
+<body>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script>
+    // 你的 firebaseConfig
+    const firebaseConfig = {
+      apiKey: "AIzaSyDGUl6MonqDlxqhz7S2b3pN-_oLNgKt04w",
+      authDomain: "wedding-wall-4acb1.firebaseapp.com",
+      databaseURL: "https://wedding-wall-4acb1-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "wedding-wall-4acb1",
+      storageBucket: "wedding-wall-4acb1.firebasestorage.app",
+      messagingSenderId: "161250703119",
+      appId: "1:161250703119:web:08433b339f70e7138cb07a"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // 字型清單
+    const fontList = [
+      "'ZCOOL KuaiLe', cursive",
+      "'Ma Shan Zheng', cursive",
+      "'Pacifico', cursive",
+      "'Baloo Bhaijaan 2', cursive",
+      "'Luckiest Guy', cursive",
+      "'Noto Sans TC', sans-serif"
+    ];
+    // 顏色列表
+    const colorList = [
+      "#ff3d6a", "#c959ff", "#ffbc1f", "#1ec19d", "#4d83ff", "#6f2dff", "#ec008c", "#f28500"
+    ];
+
+    let messages = [{text: "祝福新人幸福快樂！", ts: Date.now(), id: "default"}];
+    let shownPopIds = new Set();
+    let danmuNowShowing = new Set(); // 目前在畫面上的留言id
+
+    // 允許同時多條彈幕
+    function createDanmu(msg) {
+      danmuNowShowing.add(msg.id);
+      const danmu = document.createElement('div');
+      danmu.className = 'danmu';
+      danmu.textContent = msg.text;
+      danmu.style.fontFamily = fontList[Math.floor(Math.random() * fontList.length)];
+      danmu.style.color = colorList[Math.floor(Math.random() * colorList.length)];
+      danmu.style.fontSize = (2 + Math.random()*1.5) + "em";
+      let vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+      let y = 10 + Math.random() * (vh - 120);
+      danmu.style.top = y + "px";
+      let duration = 8 + Math.random() * 6; // 更慢 13~19秒
+      let dir = Math.random() > 0.5 ? 1 : 0;
+      if (dir === 0) { // 左到右
+        danmu.style.left = "-40vw";
+        danmu.animate([
+          { left: "-40vw" },
+          { left: "110vw" }
+        ], {
+          duration: duration * 1000,
+          easing: "linear"
+        });
+        setTimeout(() => {
+          danmu.remove();
+          danmuNowShowing.delete(msg.id);
+        }, duration * 1000);
+      } else { // 右到左
+        danmu.style.left = "110vw";
+        danmu.animate([
+          { left: "110vw" },
+          { left: "-40vw" }
+        ], {
+          duration: duration * 1000,
+          easing: "linear"
+        });
+        setTimeout(() => {
+          danmu.remove();
+          danmuNowShowing.delete(msg.id);
+        }, duration * 1000);
+      }
+      document.body.appendChild(danmu);
+    }
+
+    // 定時新增彈幕
+    function danmuScheduler() {
+      if (!messages || messages.length === 0) return;
+      // 產生數量可調整（這裡設每次1~2條）
+      let n = 1 + Math.floor(Math.random() * 2);
+      let available = messages.filter(m => !danmuNowShowing.has(m.id));
+      if (available.length === 0) return;
+      // 隨機抽n條（或available不夠就全部）
+      for (let i = 0; i < n && available.length > 0; ++i) {
+        let pick = Math.floor(Math.random() * available.length);
+        let msg = available[pick];
+        createDanmu(msg);
+        available.splice(pick, 1);
+      }
+    }
+
+    // 新pop留言顯示
+    function showPopMessages(newMsgs) {
+      newMsgs.forEach(m => {
+        const el = document.createElement('div');
+        el.className = 'pop-message';
+        el.textContent = m.text;
+        el.style.fontFamily = fontList[Math.floor(Math.random() * fontList.length)];
+        el.style.color = colorList[Math.floor(Math.random() * colorList.length)];
+        document.body.appendChild(el);
+        setTimeout(() => { el.remove(); }, 3500);
+      });
+    }
+
+    // 監控firebase
+    db.ref('messages').on('value', (snap) => {
+      let now = Date.now();
+      let list = [];
+      let newPops = [];
+      snap.forEach(child => {
+        const v = child.val();
+        list.push({text: v.text, ts: v.ts, id: child.key});
+        if (v.ts && now - v.ts <= 60000 && !shownPopIds.has(child.key)) {
+          newPops.push({text: v.text, id: child.key});
+          shownPopIds.add(child.key);
+        }
+      });
+      if (list.length === 0) list = [{text: "祝福新人幸福快樂！", ts: now, id: "default"}];
+      messages = list;
+      if (newPops.length > 0) showPopMessages(newPops);
+    });
+
+    // 彈幕排程，每2.5秒執行一次
+    setInterval(danmuScheduler, 2500);
+
+    // 進場先秀幾條
+    setTimeout(danmuScheduler, 400);
+    setTimeout(danmuScheduler, 1800);
+
+    // RWD自適應
+    window.addEventListener('resize', ()=>{});
+
+  </script>
+</body>
+</html>
