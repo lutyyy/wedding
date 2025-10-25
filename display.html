@@ -67,12 +67,11 @@
       .hint-chip { display: none; }
     }
 
-    /* ===== 調大字型、慢速動畫 ===== */
     .danmu {
       position: fixed;
       white-space: nowrap;
       font-weight: bold;
-      font-size: 3.8em; /* 原 2.2em，現在更大 */
+      font-size: 3.8em;
       pointer-events: none;
       text-shadow: 1px 2px 16px #fff8, 0 0 8px #ffb6cf88;
       user-select: none;
@@ -92,7 +91,7 @@
       color: #ff3d6a;
       border-radius: 35px;
       padding: 0.6em 2.5em;
-      font-size: 3.3em; /* 原 2.3em，現在更大 */
+      font-size: 3.3em;
       font-weight: bold;
       box-shadow: 0 8px 32px #e88ad633;
       border: 3px solid #ff3d6a33;
@@ -112,12 +111,12 @@
       left: 50%;
       top: 100vh;
       transform: translateX(-50%) translateY(0) scale(1);
-      font-size: 5.5em; /* 原 3.6em，現在更大 */
+      font-size: 5.5em;
       filter: drop-shadow(0 8px 16px #ff3d6a66);
       pointer-events: none;
       z-index: 50;
       opacity: 0.95;
-      animation: floatUp 5.2s ease-out forwards; /* 原 3.2s，現在更慢 */
+      animation: floatUp 5.2s ease-out forwards;
       will-change: transform, opacity;
     }
     @keyframes floatUp {
@@ -184,6 +183,9 @@
     const shownPopIds = new Set();
     const danmuNowShowing = new Set();
 
+    // ======== 最大同時彈幕數 =========
+    const MAX_DANMU_ON_SCREEN = 12; // 最多同時12條
+
     function createDanmu(msg) {
       danmuNowShowing.add(msg.id);
       const danmu = document.createElement('div');
@@ -191,12 +193,11 @@
       danmu.textContent = msg.text;
       danmu.style.fontFamily = fontList[Math.floor(Math.random() * fontList.length)];
       danmu.style.color = colorList[Math.floor(Math.random() * colorList.length)];
-      danmu.style.fontSize = (3.5 + Math.random() * 1.3) + "em"; // 比原本更大
-
+      danmu.style.fontSize = (3.5 + Math.random() * 1.3) + "em";
       const vh = window.innerHeight;
       const y = 10 + Math.random() * (vh - 170);
       danmu.style.top = y + "px";
-      const duration = 15500 + Math.random() * 4500; // 比原本慢
+      const duration = 15500 + Math.random() * 4500;
       const dir = Math.random() > 0.5 ? 1 : 0;
       document.body.appendChild(danmu);
       const anim = danmu.animate(
@@ -208,16 +209,24 @@
       anim.onfinish = () => { danmu.remove(); danmuNowShowing.delete(msg.id); };
     }
 
+    // ======= 彈幕數量＆速度提升 =======
     function danmuScheduler() {
       if (!messages || messages.length === 0) return;
-      const n = 1 + Math.floor(Math.random() * 2);
+      if (danmuNowShowing.size >= MAX_DANMU_ON_SCREEN) return;
+      // 一次多跑3~5條
+      const n = 3 + Math.floor(Math.random() * 3);
       const available = messages.filter(m => !danmuNowShowing.has(m.id));
-      for (let i = 0; i < n && available.length > 0; i++) {
+      for (let i = 0; i < n && available.length > 0 && danmuNowShowing.size < MAX_DANMU_ON_SCREEN; i++) {
         const pick = Math.floor(Math.random() * available.length);
         createDanmu(available[pick]);
         available.splice(pick, 1);
       }
     }
+
+    // 彈幕循環更快
+    setInterval(danmuScheduler, 2200);  // 原 5200，改 2200ms
+    setTimeout(danmuScheduler, 800);
+    setTimeout(danmuScheduler, 1400);
 
     function showPopMessages(newMsgs) {
       newMsgs.forEach(m => {
@@ -227,7 +236,7 @@
         el.style.fontFamily = fontList[Math.floor(Math.random() * fontList.length)];
         el.style.color = colorList[Math.floor(Math.random() * colorList.length)];
         document.body.appendChild(el);
-        setTimeout(() => el.remove(), 4100); // 彈出稍微久一點
+        setTimeout(() => el.remove(), 4100);
       });
     }
 
@@ -270,7 +279,7 @@
       if (newPops.length > 0) showPopMessages(newPops);
     });
 
-    // ✅ 新增多種互動特效監聽
+    // ✅ 多種互動特效監聽
     const startNow = Date.now();
     db.ref('interactions')
       .orderByChild('ts')
@@ -286,12 +295,7 @@
         }
       });
 
-    // 彈幕速度慢一點
-    setInterval(danmuScheduler, 5200);
-    setTimeout(danmuScheduler, 1500);
-    setTimeout(danmuScheduler, 3400);
-
-    // 互動特效：字型全放大、動畫時間變慢
+    // 互動特效
     function showConfetti() {
       for (let i = 0; i < 44; i++) {
         const el = document.createElement('div');
