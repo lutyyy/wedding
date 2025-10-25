@@ -8,20 +8,19 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=ZCOOL+KuaiLe&family=Ma+Shan+Zheng&family=Baloo+Bhaijaan+2:wght@600;700&family=Pacifico&family=Luckiest+Guy&display=swap" rel="stylesheet">
 
   <style>
-    /* 基本與背景層：避免 mobile 上 background-attachment: fixed 抖動 */
+    /* 基本背景與防抖動設定 */
     html, body {
       margin: 0;
       padding: 0;
       width: 100%;
-      height: 100dvh;         /* 動態視窗高，避免地址列收放跳動 */
-      overflow: hidden;        /* 不捲動頁面 */
+      height: 100dvh;
+      overflow: hidden;
       font-family: 'Noto Sans TC', sans-serif;
-      position: fixed;         /* 鎖住視窗，避免被動畫「牽著」位移 */
+      position: fixed;
       inset: 0;
+      background: #000;
+      touch-action: none;
       -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      touch-action: none;      /* 防止拉動/橡皮筋效果 */
-      background: #000;        /* 背景底色，避免圖片載入前閃白 */
     }
     body::before {
       content: "";
@@ -30,32 +29,49 @@
       background: url('https://i.meee.com.tw/QdTRWCS.jpg') center center / cover no-repeat;
       z-index: -1;
       transform: translateZ(0);
-      will-change: transform;
     }
 
-    /* 可選標題（若不需要可移除 h1 與 #titleBox） */
-    #titleBox {
-      width: 100vw;
-      z-index: 90;
+    /* ======= 左右膠囊 ======= */
+    .chip {
       position: fixed;
-      top: 0;
-      left: 0;
-      pointer-events: none;
-    }
-    h1 {
+      top: calc(10px + env(safe-area-inset-top));
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.82);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border: 1px solid #ffffff66;
+      box-shadow: 0 6px 20px rgba(0,0,0,.15);
       color: #ff3d6a;
-      text-align: center;
-      margin: 1vh 0 2vh 0;
-      font-size: 2.7em;
-      font-family: 'Luckiest Guy', cursive, 'Noto Sans TC', sans-serif;
-      text-shadow: 0 0 12px #fff8;
-      z-index: 99;
-      position: relative;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+      z-index: 200;
+      white-space: nowrap;
+      text-shadow: 0 1px 8px #fff8;
+    }
+    .live-chip { left: 12px; font-size: 15px; }
+    .hint-chip { right: 12px; font-size: 14px; }
+    .dot {
+      width: 10px; height: 10px; border-radius: 999px;
+      background: #aaa;
+      box-shadow: 0 0 0 0 rgba(0,230,118,0);
+    }
+    .dot.pulse { animation: pulse 1.6s ease-out infinite; background: #00e676; }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(0,230,118,.7); }
+      70% { box-shadow: 0 0 0 12px rgba(0,230,118,0); }
+      100% { box-shadow: 0 0 0 0 rgba(0,230,118,0); }
+    }
+    @media (max-width: 420px) {
+      .hint-chip { display: none; } /* 小螢幕隱藏右側提示 */
     }
 
     /* 彈幕 */
     .danmu {
-      position: fixed;         /* 脫離文件流，完全不影響版面 */
+      position: fixed;
       white-space: nowrap;
       font-weight: bold;
       font-size: 2.2em;
@@ -64,9 +80,8 @@
       user-select: none;
       opacity: 0.92;
       z-index: 10;
-      transition: opacity 0.3s;
-      will-change: transform;   /* 交給合成層 */
-      contain: paint;           /* 限縮繪製影響範圍 */
+      will-change: transform;
+      contain: paint;
       transform: translateZ(0);
     }
 
@@ -92,29 +107,48 @@
       text-shadow: 0 0 14px #fff8, 0 2px 24px #ffb6cf55;
       will-change: transform, opacity;
     }
-    @keyframes pop-in {
-      to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    @keyframes pop-in { to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+    @keyframes pop-out { to { opacity: 0; transform: translate(-50%, -55%) scale(0.9); } }
+
+    /* 飄心互動 */
+    .heart {
+      position: fixed;
+      left: 50%;
+      top: 100vh;
+      transform: translateX(-50%) translateY(0) scale(1);
+      font-size: 3.6em;
+      filter: drop-shadow(0 8px 16px #ff3d6a66);
+      pointer-events: none;
+      z-index: 50;
+      opacity: 0.95;
+      animation: floatUp 3.2s ease-out forwards;
+      will-change: transform, opacity;
     }
-    @keyframes pop-out {
-      to { opacity: 0; transform: translate(-50%, -55%) scale(0.9); }
+    @keyframes floatUp {
+      0%   { transform: translateY(0) translateX(0) scale(0.9); opacity: 0.9; }
+      60%  { transform: translateY(-70vh) translateX(var(--drift, 0px)) scale(1.05); opacity: 1; }
+      100% { transform: translateY(-120vh) translateX(var(--drift, 0px)) scale(1.05); opacity: 0; }
     }
 
-    /* 低動態模式友善（使用者偏好減少動畫） */
     @media (prefers-reduced-motion: reduce) {
-      .danmu { animation: none !important; transition: none !important; }
-      .pop-message { animation: none !important; opacity: 1 !important; }
+      .danmu, .pop-message, .heart { animation: none !important; transition: none !important; opacity: 1 !important; }
     }
   </style>
 </head>
 <body>
-  <!-- 若要顯示標題，取消註解以下兩行 -->
-  <!-- <div id="titleBox"><h1>婚禮即時祝福牆</h1></div> -->
+  <!-- 左右獨立膠囊 -->
+  <div class="chip live-chip">
+    <span class="dot" id="liveDot"></span>
+    <span id="liveText">LIVE：即時祝福連線中</span>
+  </div>
+
+  <div class="chip hint-chip">掃描桌卡送上祝福 💌（50 字內）</div>
 
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script>
-    // 你的 firebaseConfig
+    // === Firebase Config ===
     const firebaseConfig = {
       apiKey: "AIzaSyDGUl6MonqDlxqhz7S2b3pN-_oLNgKt04w",
       authDomain: "wedding-wall-4acb1.firebaseapp.com",
@@ -127,24 +161,35 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 字型與顏色
+    // ======= LIVE 狀態指示 =======
+    (function setupLiveBadge(){
+      const liveDot = document.getElementById('liveDot');
+      const liveText = document.getElementById('liveText');
+      db.ref('.info/connected').on('value', snap => {
+        const connected = snap.val() === true;
+        if (connected) {
+          liveDot.classList.add('pulse');
+          liveText.textContent = 'LIVE：即時祝福連線中';
+        } else {
+          liveDot.classList.remove('pulse');
+          liveDot.style.background = '#aaa';
+          liveText.textContent = 'OFFLINE：暫時斷線，重試中…';
+        }
+      });
+    })();
+
+    // ======= 彈幕系統 =======
     const fontList = [
-      "'ZCOOL KuaiLe', cursive",
-      "'Ma Shan Zheng', cursive",
-      "'Pacifico', cursive",
-      "'Baloo Bhaijaan 2', cursive",
-      "'Luckiest Guy', cursive",
-      "'Noto Sans TC', sans-serif"
+      "'ZCOOL KuaiLe', cursive", "'Ma Shan Zheng', cursive",
+      "'Pacifico', cursive", "'Baloo Bhaijaan 2', cursive",
+      "'Luckiest Guy', cursive", "'Noto Sans TC', sans-serif"
     ];
-    const colorList = [
-      "#ff3d6a", "#c959ff", "#ffbc1f", "#1ec19d", "#4d83ff", "#6f2dff", "#ec008c", "#f28500"
-    ];
+    const colorList = ["#ff3d6a","#c959ff","#ffbc1f","#1ec19d","#4d83ff","#6f2dff","#ec008c","#f28500"];
 
     let messages = [{ text: "祝福新人幸福快樂！", ts: Date.now(), id: "default" }];
     const shownPopIds = new Set();
-    const danmuNowShowing = new Set(); // 目前在畫面上的留言 id
+    const danmuNowShowing = new Set();
 
-    // 建立彈幕（用 transform 動畫，避免 reflow）
     function createDanmu(msg) {
       danmuNowShowing.add(msg.id);
       const danmu = document.createElement('div');
@@ -154,53 +199,32 @@
       danmu.style.color = colorList[Math.floor(Math.random() * colorList.length)];
       danmu.style.fontSize = (2 + Math.random() * 1.5) + "em";
 
-      const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+      const vh = window.innerHeight;
       const y = 10 + Math.random() * (vh - 120);
       danmu.style.top = y + "px";
-
-      const duration = 8000 + Math.random() * 6000; // 8~14s
+      const duration = 8000 + Math.random() * 6000;
       const dir = Math.random() > 0.5 ? 1 : 0;
-
-      // 放到畫面上再開始動畫，避免計算抖動
       document.body.appendChild(danmu);
-
-      if (dir === 0) {
-        // 左 -> 右（確保完全離開螢幕，使用 +/-110vw）
-        danmu.style.transform = 'translateX(-110vw)';
-        const anim = danmu.animate(
-          [{ transform: 'translateX(-110vw)' }, { transform: 'translateX(110vw)' }],
-          { duration, easing: 'linear' }
-        );
-        anim.onfinish = () => { danmu.remove(); danmuNowShowing.delete(msg.id); };
-      } else {
-        // 右 -> 左
-        danmu.style.transform = 'translateX(110vw)';
-        const anim = danmu.animate(
+      const anim = danmu.animate(
+        dir === 0 ?
+          [{ transform: 'translateX(-110vw)' }, { transform: 'translateX(110vw)' }] :
           [{ transform: 'translateX(110vw)' }, { transform: 'translateX(-110vw)' }],
-          { duration, easing: 'linear' }
-        );
-        anim.onfinish = () => { danmu.remove(); danmuNowShowing.delete(msg.id); };
-      }
+        { duration, easing: 'linear' }
+      );
+      anim.onfinish = () => { danmu.remove(); danmuNowShowing.delete(msg.id); };
     }
 
-    // 定時新增彈幕
     function danmuScheduler() {
       if (!messages || messages.length === 0) return;
-
-      // 每次 1~2 條，避免同場動畫過多
       const n = 1 + Math.floor(Math.random() * 2);
       const available = messages.filter(m => !danmuNowShowing.has(m.id));
-      if (available.length === 0) return;
-
       for (let i = 0; i < n && available.length > 0; i++) {
         const pick = Math.floor(Math.random() * available.length);
-        const msg = available[pick];
-        createDanmu(msg);
+        createDanmu(available[pick]);
         available.splice(pick, 1);
       }
     }
 
-    // 新 pop 留言顯示（中央彈出）
     function showPopMessages(newMsgs) {
       newMsgs.forEach(m => {
         const el = document.createElement('div');
@@ -209,11 +233,31 @@
         el.style.fontFamily = fontList[Math.floor(Math.random() * fontList.length)];
         el.style.color = colorList[Math.floor(Math.random() * colorList.length)];
         document.body.appendChild(el);
-        setTimeout(() => { el.remove(); }, 3500);
+        setTimeout(() => el.remove(), 3500);
       });
     }
 
-    // 監控 Firebase
+    function showHeartBurst() {
+      const count = 6 + Math.floor(Math.random() * 4);
+      for (let i = 0; i < count; i++) {
+        const heart = document.createElement('div');
+        heart.className = 'heart';
+        heart.textContent = Math.random() < 0.15 ? '💘' : (Math.random() < 0.5 ? '💖' : '❤️');
+        const startX = 10 + Math.random() * 80;
+        const size = 2.6 + Math.random() * 2.2;
+        const drift = (Math.random() * 120 - 60) + 'px';
+        heart.style.left = startX + 'vw';
+        heart.style.fontSize = size + 'em';
+        heart.style.setProperty('--drift', drift);
+        const delay = Math.random() * 250;
+        setTimeout(() => {
+          document.body.appendChild(heart);
+          setTimeout(() => heart.remove(), 3300);
+        }, delay);
+      }
+    }
+
+    // ======= Firebase 監聽：訊息與互動 =======
     db.ref('messages').on('value', (snap) => {
       const now = Date.now();
       let list = [];
@@ -223,7 +267,7 @@
         const item = { text: v.text, ts: v.ts, id: child.key };
         list.push(item);
         if (v.ts && now - v.ts <= 60000 && !shownPopIds.has(child.key)) {
-          newPops.push({ text: v.text, id: child.key });
+          newPops.push(item);
           shownPopIds.add(child.key);
         }
       });
@@ -232,16 +276,89 @@
       if (newPops.length > 0) showPopMessages(newPops);
     });
 
-    // 彈幕排程
-    const SCHEDULE_MS = 3000;   // 手機上更穩的節奏（原 2500ms）
-    setInterval(danmuScheduler, SCHEDULE_MS);
+    // ✅ 新增多種互動特效監聽
+    const startNow = Date.now();
+    db.ref('interactions')
+      .orderByChild('ts')
+      .startAt(startNow)
+      .on('child_added', (snap) => {
+        const v = snap.val();
+        if (!v?.type) return;
+        switch (v.type) {
+          case 'heart':   showHeartBurst();  break;
+          case 'flower':  showConfetti();    break;
+          case 'balloon': showBalloons();    break;
+          case 'firework':showFireworks();   break;
+        }
+      });
 
-    // 進場先秀幾條
+    // ======= 啟動彈幕 =======
+    setInterval(danmuScheduler, 3000);
     setTimeout(danmuScheduler, 400);
     setTimeout(danmuScheduler, 1800);
 
-    // 鎖定視窗尺寸（避免 resize 造成跳動）
-    window.addEventListener('resize', () => {});
+    // ======= 互動特效實作 =======
+    function showConfetti() {
+      for (let i=0;i<44;i++){
+        const el=document.createElement('div');
+        el.textContent=['🎉','✨','💫','🌸'][Math.floor(Math.random()*4)];
+        el.style.position='fixed';
+        el.style.left=Math.random()*100+'vw';
+        el.style.top='-5vh';
+        el.style.fontSize=(1.5+Math.random()*1.2)+'em';
+        el.style.opacity=0.95;
+        el.style.zIndex=80;
+        el.style.transition='transform 3.5s ease-out, opacity 3.5s';
+        document.body.appendChild(el);
+        setTimeout(()=>{
+          el.style.transform=`translateY(${110+Math.random()*20}vh) rotate(${Math.random()*720}deg)`;
+          el.style.opacity=0;
+        },50);
+        setTimeout(()=>el.remove(),3600);
+      }
+    }
+
+    function showBalloons(){
+      for(let i=0;i<12;i++){
+        const el=document.createElement('div');
+        el.textContent=['🎈','🎈','🎊'][Math.floor(Math.random()*3)];
+        el.style.position='fixed';
+        el.style.left=10+Math.random()*80+'vw';
+        el.style.bottom='-10vh';
+        el.style.fontSize=(2+Math.random()*2)+'em';
+        el.style.transition='transform 5s ease-out, opacity 5s';
+        el.style.zIndex=60;
+        document.body.appendChild(el);
+        setTimeout(()=>{
+          el.style.transform=`translateY(-110vh) translateX(${Math.random()*80-40}px)`;
+          el.style.opacity=0;
+        },50);
+        setTimeout(()=>el.remove(),5100);
+      }
+    }
+
+    function showFireworks(){
+      for(let i=0;i<16;i++){
+        const el=document.createElement('div');
+        el.textContent=['💥','✨','🌟','💫'][Math.floor(Math.random()*4)];
+        el.style.position='fixed';
+        el.style.left=20+Math.random()*60+'vw';
+        el.style.top=30+Math.random()*40+'vh';
+        el.style.fontSize=(2.5+Math.random()*1.5)+'em';
+        el.style.zIndex=90;
+        el.style.opacity=0;
+        document.body.appendChild(el);
+        setTimeout(()=>{
+          el.style.transition='opacity 0.3s';
+          el.style.opacity=1;
+        },100);
+        setTimeout(()=>{
+          el.style.transition='opacity 0.8s';
+          el.style.opacity=0;
+        },800+Math.random()*500);
+        setTimeout(()=>el.remove(),1600);
+      }
+    }
   </script>
 </body>
 </html>
